@@ -2,8 +2,9 @@
   "name": "sharex-upload-server",
   "version": "0.2.2",
   "description": "ShareX upload server",
-  "main": "app.js",
+  "main": "server/app.js",
   "scripts": {
+    "start": "node .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

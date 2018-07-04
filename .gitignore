@@ -58,4 +58,7 @@ typings/
 .env
 
 # Uploads directory
-uploads/
+dist/
+
+# config file
+server/config.json

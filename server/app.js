@@ -1,10 +1,11 @@
 /**
  * @author Moquo (Moritz Maier)
+ * @author Xanatori (Marc Hein)
  */
 
 // Constants
 const config = require('./config.json')
-const version = require('./package.json').version;
+const version = require('../package.json').version;
 const keys = config.keys;
 
 // Get the port
@@ -22,16 +23,16 @@ var fs = require('fs');
 var fileExists = require('file-exists');
 
 // Create /uploads directory if not exists
-if(!fs.existsSync('./uploads/')) {
-    fs.mkdirSync('./uploads/');
-    logger.info('Created /uploads directory');
+if(!fs.existsSync("." + config.uploadFolder + "/")) {
+    fs.mkdirSync("." + config.uploadFolder + "/");
+    logger.info("Created " + config.uploadFolder +  " directory");
 }
 
 // Express basic stuff
 var express = require('express');
 var app = express();
 // Static directory for files
-app.use('/f', express.static('./uploads'));
+app.use(config.uploadFolderShort, express.static("." + config.uploadFolder + "/"));
 // body-parser middleware
 var bodyParser = require('body-parser');
 app.use(bodyParser.json());
@@ -56,7 +57,7 @@ app.get('/', function(req, res) {
 // Upload file
 app.post('/upload', function(req, res) {
     // Check if key is set
-    if(!req.body.key) {
+    if(!req.query.key) {
         res.setHeader('Content-Type', 'application/json');
         res.status(400).send(JSON.stringify({
             success: false,
@@ -67,7 +68,7 @@ app.post('/upload', function(req, res) {
         }));
     } else {
         // Check if key is registered
-        var key = req.body.key;
+        var key = req.query.key;
         var shortKey = key.substr(0, 3) + '...';
         if(keys.indexOf(key) == -1) {
             logger.auth('Failed authentication with key ' + key);
@@ -83,7 +84,7 @@ app.post('/upload', function(req, res) {
             // Key is valid
             logger.auth('Authentication with key ' + shortKey + ' succeeded');
             // Check if file was uploaded
-            if(!req.files.file) {
+            if(!req.files.media) {
                 logger.info('No file was sent, aborting... (' + shortKey + ')');
                 res.setHeader('Content-Type', 'application/json');
                 res.status(400).send(JSON.stringify({
@@ -95,11 +96,11 @@ app.post('/upload', function(req, res) {
                 }));
             } else {
                 // File was uploaded
-                var file = req.files.file;
+                var file = req.files.media;
                 // Generate the path
                 var fileExtension = path.extname(file.name);
                 var newFileName = randomString({length: config.fileNameLength}) + fileExtension;
-                var uploadPath = __dirname + '/uploads/' + newFileName;
+                var uploadPath = __dirname + "/.." + config.uploadFolder + "/" + newFileName;
                 logger.info('Uploading file ' + file.name + ' to ' + newFileName + ' (' + shortKey + ')');
 
                 // Check file extension (if enabled)
@@ -127,10 +128,8 @@ app.post('/upload', function(req, res) {
                         res.setHeader('Content-Type', 'application/json');
                         res.send(JSON.stringify({
                             success: true,
-                            file: {
-                                url: config.serverUrl + '/f/' + newFileName,
-                                delete_url: config.serverUrl + '/delete?filename=' + newFileName + '&key=' + key
-                            }
+                            url: config.serverUrl + config.uploadFolderShort + "/" + newFileName,
+                            delete_url: config.serverUrl + '/delete?filename=' + newFileName + '&key=' + key
                         }));
                     });
                 }
@@ -169,7 +168,7 @@ app.get('/delete', function(req, res) {
             logger.auth('Authentication with key ' + shortKey + ' succeeded');
             // Generate file informations
             var fileName = req.query.filename;
-            var filePath = __dirname + '/uploads/' + fileName;
+            var filePath = __dirname + config.uploadFolder + "/" + fileName;
             logger.info('Trying to delete ' + fileName + ' (' + shortKey + ')');
 
             // Check if file exists
